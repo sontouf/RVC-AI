@@ -83,10 +83,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rvc-binaries
-          path: .
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ python3
+      - name: Build rvc_sim
+        run: |
+          cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DRVC_BUILD_TESTS=OFF -DRVC_BUILD_SIM=ON
+          cmake --build build --parallel --target rvc_sim
       - name: Prepare maps + run system suite
         run: |
           chmod +x build/rvc_sim
@@ -113,16 +117,38 @@ jobs:
           path: reports/static-analysis/
 
   deploy:
-    needs: [system_tests]
+    needs: [system_tests, static_analysis, coverage]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rvc-binaries
-          path: .
-      - name: Deployment gate
+      - name: Dependencies
         run: |
-          echo "System tests passed on main — deploy hook."
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ python3
+      - name: Build release bundle
+        run: |
+          cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DRVC_BUILD_TESTS=ON -DRVC_BUILD_SIM=ON
+          cmake --build build --parallel
+      - name: Sanity check binaries
+        run: |
+          chmod +x build/rvc_sim build/rvc_unit_tests build/rvc_integration_tests
+          ./build/rvc_unit_tests --gtest_brief=1
+          ./build/rvc_integration_tests --gtest_brief=1
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvc-release-${{ github.sha }}
+          path: |
+            build/rvc_sim
+            build/rvc_unit_tests
+            build/rvc_integration_tests
+      - name: Deployment summary
+        run: |
+          echo "## RVC deployment bundle" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workflow: ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: \`rvc-release-${{ github.sha }}\` (sim + GTest binaries, Linux x64)" >> "$GITHUB_STEP_SUMMARY"
           ls -la build/rvc_sim build/rvc_unit_tests build/rvc_integration_tests
