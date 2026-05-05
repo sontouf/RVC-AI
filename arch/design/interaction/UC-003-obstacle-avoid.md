@@ -31,7 +31,7 @@ sequenceDiagram
 ## GRASP / 가시성 메모
 
 - **Controller**: `CleaningCoordinator` — 정지→회피→재전진 순서.
-- **Expert**: `NavigationPolicy` — `classifyObstacle`·`planAvoidance`(동일 타입 내 응집 가능).
+- **Expert**: `NavigationPolicy` — `classifyObstacle`·`planAvoidance`(동일 타입 내 응집 가능). 전방 막힘 시 **왼쪽만 통로 → 좌**, **오른쪽만 → 우**, **양쪽 → 좌** 우선.
 - **DIP**: `SensorPort`, `ActuatorPort` 추상 — GTest 더블.
 - **A2 / E***: 연속 장애·공간 부족 시 UC-004 또는 안전 정지 — Coordinator 정책.
 
