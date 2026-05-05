@@ -116,7 +116,7 @@ jobs:
           chmod +x build/rvc_unit_tests build/rvc_integration_tests
           ./build/rvc_unit_tests
           ./build/rvc_integration_tests
-      - name: Coverage gate (gcovr: line & branch ≥80%, src/ only)
+      - name: "Coverage gate (gcovr: line & branch ≥80%, src/ only)"
         run: |
           .venv-ci/bin/gcovr --root "${GITHUB_WORKSPACE}" \
             --filter 'src/' \
