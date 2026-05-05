@@ -20,7 +20,7 @@ ObstacleClass NavigationPolicy::classify_obstacle(const PerceptionSnapshot& snap
 
 ManeuverPlan NavigationPolicy::plan_avoidance(const PerceptionSnapshot& snap) const {
   ManeuverPlan plan;
-  // Prefer side with free space; deterministic tie-break: Right.
+  // Front blocked: use whichever side is open; both open → deterministic Left (FR-003 / UC-003 A1).
   if (snap.front_blocked) {
     const bool left_free = !snap.left_blocked;
     const bool right_free = !snap.right_blocked;
@@ -29,7 +29,7 @@ ManeuverPlan NavigationPolicy::plan_avoidance(const PerceptionSnapshot& snap) co
     } else if (!left_free && right_free) {
       plan.side = AvoidSide::Right;
     } else if (left_free && right_free) {
-      plan.side = AvoidSide::Right;
+      plan.side = AvoidSide::Left;
     } else {
       // Trapped on front; sides blocked — should be handled as enclosure elsewhere.
       plan.side = AvoidSide::Right;

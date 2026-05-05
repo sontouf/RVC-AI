@@ -26,11 +26,21 @@ TEST(NavigationPolicy, ClassifyEnclosure) {
   EXPECT_EQ(nav.classify_obstacle(s), ObstacleClass::AllSidesBlocked);
 }
 
-TEST(NavigationPolicy, AvoidanceWhenFrontBlocked) {
+TEST(NavigationPolicy, AvoidanceWhenBothSidesOpenPrefersLeft) {
   NavigationPolicy nav;
   PerceptionSnapshot s{};
   s.front_blocked = true;
   s.left_blocked = false;
+  s.right_blocked = false;
+  const ManeuverPlan p = nav.plan_avoidance(s);
+  EXPECT_EQ(p.side, AvoidSide::Left);
+}
+
+TEST(NavigationPolicy, AvoidPrefersRightWhenLeftBlocked) {
+  NavigationPolicy nav;
+  PerceptionSnapshot s{};
+  s.front_blocked = true;
+  s.left_blocked = true;
   s.right_blocked = false;
   const ManeuverPlan p = nav.plan_avoidance(s);
   EXPECT_EQ(p.side, AvoidSide::Right);

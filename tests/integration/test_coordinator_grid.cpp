@@ -32,8 +32,43 @@ TEST(CoordinatorGrid, PartialAvoidThenForward) {
   coord.tick();
   coord.tick();
   coord.tick();
+  // Front blocked, left+right open → prefer left (North), then forward.
+  EXPECT_EQ(world.heading(), Heading::North);
+  EXPECT_EQ(world.row(), 1);
+  EXPECT_EQ(world.col(), 1);
+}
+
+TEST(CoordinatorGrid, PartialAvoidPrefersRightWhenLeftBlocked) {
+  GridWorld world(5, 5);
+  world.set_pose(2, 1, Heading::East);
+  world.set_obstacle(2, 2, true);
+  world.set_obstacle(1, 1, true);  // left-of-heading (North from East)
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  coord.tick();
+  coord.tick();
+  coord.tick();
   EXPECT_EQ(world.heading(), Heading::South);
   EXPECT_EQ(world.row(), 3);
+  EXPECT_EQ(world.col(), 1);
+}
+
+TEST(CoordinatorGrid, PartialAvoidPrefersLeftWhenRightBlocked) {
+  GridWorld world(5, 5);
+  world.set_pose(2, 1, Heading::East);
+  world.set_obstacle(2, 2, true);
+  world.set_obstacle(3, 1, true);  // right (South from East)
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  coord.tick();
+  coord.tick();
+  coord.tick();
+  EXPECT_EQ(world.heading(), Heading::North);
+  EXPECT_EQ(world.row(), 1);
   EXPECT_EQ(world.col(), 1);
 }
 

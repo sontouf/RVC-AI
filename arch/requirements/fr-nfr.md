@@ -26,7 +26,7 @@
 |----|------|---------|
 | FR-001 | 사용자가 **자동 청소 세션**을 시작·중지한다 (`system.md` 범위). | UC-001 — *Control automatic cleaning session* |
 | FR-002 | 세션이 **Cleaning**일 때 기본으로 **전진**하며 청소(및 걸레)한다. 먼지 부스트(A1)는 UC-005와 병행 가능, 삼면막힘은 UC-004로 전환. | UC-002 — *Forward cleaning while session active* |
-| FR-003 | 전·좌·우 중 **일부 방향만** 장애 시 주행·청소 일시 정지 → **좌 또는 우** 회피 → 전진 청소 재개. 삼면 동시 막힘은 UC-004. | UC-003 — *Avoid obstacle when partially blocked* |
+| FR-003 | 전방 막힘 시: **왼쪽만 통로**면 좌회피, **오른쪽만 통로**면 우회피, **양쪽 통로**면 **좌회피**로 통일. 그 외 일부 방향 장애는 동일 UC-003 흐름. 삼면 동시 막힘은 UC-004. | UC-003 — *Avoid obstacle when partially blocked* |
 | FR-004 | **전·좌·우 동시** 막힘 시 정지 → **후진** → 좌/우 회피 → 전진 청소 재개. 후방 안전·탈출 한계는 해당 UC 예외 흐름·NFR 정책. | UC-004 — *Escape when front, left, and right are blocked* |
 | FR-005 | **먼지 감지** 시 **유지 시간 T** 동안 파워 상향 후 **기본 파워** 복귀. 부스트 중 UC-003/004는 **안전·회피 우선**(UC-005 A2). | UC-005 — *Boost cleaning power on dust detection* |
 
