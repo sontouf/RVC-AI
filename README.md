@@ -1,5 +1,7 @@
 # RVC SW Controller (grid simulator)
 
+[![CI](https://github.com/sontouf/RVC-AI/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sontouf/RVC-AI/actions/workflows/ci.yml)
+
 CMake C++17 core: `CleaningCoordinator`, grid `Sensor`/`Actuator` adapters, scenario runner **`rvc_sim`.  
 System tests: **40+ JSON maps** under `system_tests/maps/` plus `system_tests/run_all.py` (per-scenario asserts, **forbidden_states**, **global display-state coverage**).  
 GUI: `sim/rvc_grid_gui.py` (tkinter) animates traces from `rvc_sim --jsonl`.
