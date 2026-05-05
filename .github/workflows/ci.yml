@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [main, master]
 
+permissions:
+  contents: read
+  checks: write
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -33,7 +37,6 @@ jobs:
             build/rvc_unit_tests
             build/rvc_integration_tests
 
-  # Rebuild and run tests on the runner (avoids artifact path/permission issues with prebuilt binaries).
   tests:
     needs: [build]
     runs-on: ubuntu-latest
@@ -47,10 +50,52 @@ jobs:
         run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DRVC_BUILD_TESTS=ON -DRVC_BUILD_SIM=ON
       - name: Build tests
         run: cmake --build build --parallel
-      - name: Unit tests
-        run: ./build/rvc_unit_tests
-      - name: Integration tests
-        run: ./build/rvc_integration_tests
+      - name: GTest — unit + integration (XML + console logs)
+        run: |
+          set -uo pipefail
+          mkdir -p test-results
+          ec=0
+          ./build/rvc_unit_tests \
+            --gtest_output=xml:test-results/unit.xml \
+            --gtest_print_time=1 2>&1 | tee test-results/unit-console.log || ec=1
+          ./build/rvc_integration_tests \
+            --gtest_output=xml:test-results/integration.xml \
+            --gtest_print_time=1 2>&1 | tee test-results/integration-console.log || ec=1
+          exit "$ec"
+      - name: Test run summary
+        if: always()
+        run: |
+          echo "## GTest — unit + integration" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "아티팩트 \`gtest-reports\` 에서 JUnit XML·콘솔 로그를 내려받을 수 있습니다." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Unit (tail)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 40 test-results/unit-console.log >> "$GITHUB_STEP_SUMMARY" || echo "(no log)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Integration (tail)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 40 test-results/integration-console.log >> "$GITHUB_STEP_SUMMARY" || echo "(no log)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish GTest results (Checks)
+        uses: EnricoMi/publish-unit-test-result-action@v2.17.0
+        if: always()
+        with:
+          files: test-results/unit.xml test-results/integration.xml
+          check_name: GTest results
+          comment_mode: off
+          report_individual_runs: true
+      - name: Upload GTest XML and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gtest-reports
+          path: |
+            test-results/unit.xml
+            test-results/integration.xml
+            test-results/unit-console.log
+            test-results/integration-console.log
 
   coverage:
     needs: [tests]
@@ -69,14 +114,29 @@ jobs:
           chmod +x build/rvc_unit_tests build/rvc_integration_tests
           ./build/rvc_unit_tests
           ./build/rvc_integration_tests
-      - name: lcov
+      - name: lcov — src/ only, line + branch
         run: |
-          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
-          lcov --remove coverage.info '/usr/*' '*/_deps/*' --output-file coverage.info --ignore-errors unused
+          lcov --capture --directory build --output-file coverage-all.info --ignore-errors mismatch --rc branch_coverage=1
+          lcov --remove coverage-all.info '/usr/*' '*/_deps/*' '*/tests/*' --output-file coverage-all.info --ignore-errors unused --rc branch_coverage=1
+          lcov --extract coverage-all.info '*/src/*' --output-file coverage-src.info --rc branch_coverage=1
+          lcov --summary coverage-src.info --rc branch_coverage=1
+      - name: Enforce coverage ≥ 80% (lines + branches on src/)
+        run: python3 scripts/check_lcov_threshold.py coverage-src.info --lines 80 --branches 80
+      - name: Coverage summary for UI
+        run: |
+          echo "## Coverage (src/ 제품 코드)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "게이트: **line ≥ 80%**, **branch ≥ 80%** (lcov, \`coverage-src.info\`)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          lcov --summary coverage-src.info --rc branch_coverage=1 >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-lcov
-          path: coverage.info
+          path: |
+            coverage-src.info
+            coverage-all.info
 
   system_tests:
     needs: [tests]
@@ -95,10 +155,28 @@ jobs:
         run: |
           chmod +x build/rvc_sim
           python3 scripts/generate_system_maps.py
-          python3 system_tests/run_all.py --root . --sim build/rvc_sim
+          set -o pipefail
+          python3 system_tests/run_all.py --root . --sim build/rvc_sim 2>&1 | tee system-tests.log
+      - name: Upload system test log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: system-tests-log
+          path: system-tests.log
+      - name: System tests summary
+        if: always()
+        run: |
+          echo "## System tests (run_all.py)" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "로그 아티팩트: \`system-tests-log\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo '```text' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 60 system-tests.log >> "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
 
+  # Deploy·커버리지와 병렬. 결과는 아티팩트로만 확인 (다음 단계 진행을 막지 않음).
   static_analysis:
-    needs: [system_tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -115,14 +193,18 @@ jobs:
         with:
           name: static-analysis
           path: reports/static-analysis/
+      - name: Static analysis hint
+        run: |
+          echo "## Static analysis (cppcheck)" >> "$GITHUB_STEP_SUMMARY"
+          echo "원본: 아티팩트 \`static-analysis/cppcheck.txt\` (배포 게이트와 무관)" >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
-    needs: [system_tests, static_analysis, coverage]
+    needs: [system_tests, coverage]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     permissions:
-      actions: read
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v4
       - name: Dependencies
@@ -149,6 +231,6 @@ jobs:
       - name: Deployment summary
         run: |
           echo "## RVC deployment bundle" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Workflow: ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Artifact: \`rvc-release-${{ github.sha }}\` (sim + GTest binaries, Linux x64)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Workflow run: ${{ github.run_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Artifact: \`rvc-release-${{ github.sha }}\` (Linux x64: sim + GTest)" >> "$GITHUB_STEP_SUMMARY"
           ls -la build/rvc_sim build/rvc_unit_tests build/rvc_integration_tests
