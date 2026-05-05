@@ -1,3 +1,5 @@
+#include <algorithm>
+
 #include "rvc/cleaning_power_policy.hpp"
 
 namespace rvc {

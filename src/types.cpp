@@ -18,8 +18,9 @@ std::string to_string(DisplayState s) {
       return "Maneuver_Reverse";
     case DisplayState::Session_Stopping:
       return "Session_Stopping";
+    default:
+      return "Unknown";
   }
-  return "Unknown";
 }
 
 }  // namespace rvc
