@@ -136,6 +136,79 @@ def main() -> None:
         ),
     )
 
+    # Wide grid + checker pillars + dust: many avoid turns and at least one boost window.
+    w_st, h_st = 16, 11
+    obs_st: list[list[int]] = []
+    for c in range(w_st):
+        obs_st.append([0, c])
+        obs_st.append([h_st - 1, c])
+    for r in range(h_st):
+        obs_st.append([r, 0])
+        obs_st.append([r, w_st - 1])
+    for r in range(2, h_st - 2):
+        for c in range(3, w_st - 2):
+            if (r + c) % 2 == 0:
+                obs_st.append([r, c])
+    mid_r = h_st // 2
+    # Dust on starting cell (sensor reads current cell) plus deeper cells for sustained tour.
+    dust_st = [[mid_r, 1, 2], [mid_r, 8, 2], [mid_r - 2, 11, 1]]
+    write(
+        os.path.join(MAPS, "s_042_complex_stress.json"),
+        {
+            "name": "s_042_complex_stress",
+            "width": w_st,
+            "height": h_st,
+            "obstacles": obs_st,
+            "dust": dust_st,
+            "start": {"row": mid_r, "col": 1, "heading": "E"},
+            "max_ticks": 650,
+            "auto_start": True,
+            "required_states": ["Cleaning_Forward", "Maneuver_Turn", "Cleaning_Forward_Boost"],
+        },
+    )
+
+    # Zigzag walls forcing repeated avoids; dust on-path for boost debounce.
+    write(
+        os.path.join(MAPS, "s_043_maze_escape_mix.json"),
+        {
+            "name": "s_043_maze_escape_mix",
+            "width": 14,
+            "height": 10,
+            "obstacles": [
+                [5, 2],
+                [5, 3],
+                [5, 4],
+                [4, 4],
+                [3, 4],
+                [3, 3],
+                [3, 2],
+                [6, 6],
+                [5, 6],
+                [4, 6],
+                [4, 7],
+                [4, 8],
+                [5, 8],
+                [6, 8],
+                [6, 7],
+                [2, 7],
+                [2, 8],
+                [2, 9],
+                [7, 4],
+                [8, 4],
+                [8, 5],
+                [8, 6],
+                [7, 6],
+                [1, 5],
+                [1, 6],
+            ],
+            "dust": [[5, 1, 2], [6, 9, 1]],
+            "start": {"row": 5, "col": 1, "heading": "E"},
+            "max_ticks": 450,
+            "auto_start": True,
+            "required_states": ["Maneuver_Turn", "Maneuver_Stop", "Cleaning_Forward"],
+        },
+    )
+
     # Variations s_008..s_040 (size/placement fuzz, still deterministic)
     for i in range(8, 41):
         w = 5 + (i % 5)
