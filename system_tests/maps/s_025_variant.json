@@ -1,0 +1,22 @@
+{
+  "name": "s_025_variant",
+  "width": 5,
+  "height": 5,
+  "obstacles": [
+    [
+      3,
+      2
+    ]
+  ],
+  "dust": [],
+  "start": {
+    "row": 2,
+    "col": 1,
+    "heading": "E"
+  },
+  "max_ticks": 100,
+  "auto_start": true,
+  "required_states": [
+    "Cleaning_Forward"
+  ]
+}

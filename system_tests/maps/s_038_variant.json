@@ -1,0 +1,28 @@
+{
+  "name": "s_038_variant",
+  "width": 8,
+  "height": 9,
+  "obstacles": [
+    [
+      6,
+      3
+    ]
+  ],
+  "dust": [
+    [
+      7,
+      2,
+      1
+    ]
+  ],
+  "start": {
+    "row": 4,
+    "col": 1,
+    "heading": "E"
+  },
+  "max_ticks": 100,
+  "auto_start": true,
+  "required_states": [
+    "Cleaning_Forward"
+  ]
+}

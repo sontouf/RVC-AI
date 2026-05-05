@@ -1,0 +1,35 @@
+{
+  "name": "s_005_enclosure_escape",
+  "width": 6,
+  "height": 6,
+  "obstacles": [
+    [
+      2,
+      3
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      3,
+      2
+    ]
+  ],
+  "dust": [],
+  "start": {
+    "row": 2,
+    "col": 2,
+    "heading": "E"
+  },
+  "max_ticks": 80,
+  "auto_start": true,
+  "required_states": [
+    "Maneuver_Reverse",
+    "Maneuver_Turn"
+  ]
+}

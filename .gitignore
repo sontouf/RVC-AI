@@ -1,0 +1,21 @@
+/build/
+/out/
+/.vs/
+/.idea/
+CMakeUserPresets.json
+CMakeFiles/
+compile_commands.json
+*.user
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+__pycache__/
+*.pyc
+.python-version
+/reports/
+
+# Nested reference tree (separate git history)
+/arch-with-ai/

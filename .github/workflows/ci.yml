@@ -1,0 +1,132 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ python3
+      - name: Configure
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DRVC_BUILD_TESTS=ON -DRVC_BUILD_SIM=ON
+      - name: Build
+        run: cmake --build build --parallel
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvc-binaries
+          path: |
+            build/rvc_sim
+            build/rvc_unit_tests
+            build/rvc_integration_tests
+
+  unit_tests:
+    needs: [build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rvc-binaries
+          path: .
+      - name: Run unit tests
+        run: chmod +x build/rvc_unit_tests && ./build/rvc_unit_tests
+
+  integration_tests:
+    needs: [unit_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rvc-binaries
+          path: .
+      - name: Run integration tests
+        run: chmod +x build/rvc_integration_tests && ./build/rvc_integration_tests
+
+  coverage:
+    needs: [integration_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++ lcov python3
+      - name: Configure (coverage)
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Debug -DRVC_BUILD_TESTS=ON -DRVC_BUILD_SIM=OFF -DRVC_ENABLE_COVERAGE=ON
+      - name: Build + GTest
+        run: |
+          cmake --build build --parallel
+          chmod +x build/rvc_unit_tests build/rvc_integration_tests
+          ./build/rvc_unit_tests
+          ./build/rvc_integration_tests
+      - name: lcov
+        run: |
+          lcov --capture --directory build --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/_deps/*' --output-file coverage.info --ignore-errors unused
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage.info
+
+  system_tests:
+    needs: [integration_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rvc-binaries
+          path: .
+      - name: Prepare maps + run system suite
+        run: |
+          chmod +x build/rvc_sim
+          python3 scripts/generate_system_maps.py
+          python3 system_tests/run_all.py --root . --sim build/rvc_sim
+
+  static_analysis:
+    needs: [system_tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: cppcheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck
+          mkdir -p reports/static-analysis
+          cppcheck --error-exitcode=0 --enable=warning,style --inline-suppr \
+            -I include --suppress=missingIncludeSystem \
+            src tools 2> reports/static-analysis/cppcheck.txt || true
+          wc -l reports/static-analysis/cppcheck.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: static-analysis
+          path: reports/static-analysis/
+
+  deploy:
+    needs: [system_tests]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: rvc-binaries
+          path: .
+      - name: Deployment gate
+        run: |
+          echo "System tests passed on main — deploy hook."
+          ls -la build/rvc_sim build/rvc_unit_tests build/rvc_integration_tests

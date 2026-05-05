@@ -1,0 +1,23 @@
+{
+  "name": "s_003_dust_boost",
+  "width": 6,
+  "height": 6,
+  "obstacles": [],
+  "dust": [
+    [
+      2,
+      2,
+      2
+    ]
+  ],
+  "start": {
+    "row": 2,
+    "col": 2,
+    "heading": "E"
+  },
+  "max_ticks": 15,
+  "auto_start": true,
+  "required_states": [
+    "Cleaning_Forward_Boost"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "s_001_idle_only",
+  "width": 6,
+  "height": 6,
+  "obstacles": [],
+  "dust": [],
+  "start": {
+    "row": 2,
+    "col": 1,
+    "heading": "E"
+  },
+  "max_ticks": 4,
+  "auto_start": false,
+  "required_states": [
+    "Idle"
+  ]
+}

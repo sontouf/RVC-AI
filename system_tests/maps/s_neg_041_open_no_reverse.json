@@ -1,0 +1,20 @@
+{
+  "name": "s_neg_041_open_no_reverse",
+  "width": 5,
+  "height": 5,
+  "obstacles": [],
+  "dust": [],
+  "start": {
+    "row": 2,
+    "col": 1,
+    "heading": "E"
+  },
+  "max_ticks": 25,
+  "auto_start": true,
+  "required_states": [
+    "Cleaning_Forward"
+  ],
+  "forbidden_states": [
+    "Maneuver_Reverse"
+  ]
+}

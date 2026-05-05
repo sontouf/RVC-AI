@@ -1,0 +1,48 @@
+{
+  "name": "s_007_master_walkthrough",
+  "width": 10,
+  "height": 5,
+  "obstacles": [
+    [
+      2,
+      6
+    ],
+    [
+      1,
+      8
+    ],
+    [
+      3,
+      8
+    ],
+    [
+      2,
+      9
+    ]
+  ],
+  "dust": [
+    [
+      2,
+      3,
+      2
+    ]
+  ],
+  "start": {
+    "row": 2,
+    "col": 1,
+    "heading": "E"
+  },
+  "max_ticks": 220,
+  "auto_start": false,
+  "inject": [
+    {
+      "at_tick": 2,
+      "command": "Start"
+    },
+    {
+      "at_tick": 180,
+      "command": "Stop"
+    }
+  ],
+  "required_states": []
+}
