@@ -170,6 +170,21 @@ int main(int argc, char** argv) {
   }
 
   const auto& trace = coord.trace_states();
+
+  // JSONL consumers (e.g. system_tests/run_all.py) only see per-tick `display`.
+  // Transient states like Session_Stopping may exist only in trace_states().
+  if (jsonl) {
+    std::unordered_set<std::string> uniq(trace.begin(), trace.end());
+    nlohmann::json arr = nlohmann::json::array();
+    for (const auto& s : uniq) {
+      arr.push_back(s);
+    }
+    nlohmann::json footer;
+    footer["_trace_states"] = std::move(arr);
+    std::cout << footer.dump() << "\n";
+    std::cout.flush();
+  }
+
   std::unordered_set<std::string> seen(trace.begin(), trace.end());
 
   bool ok = true;

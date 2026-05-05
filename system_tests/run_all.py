@@ -31,7 +31,19 @@ def find_rvc_sim(repo_root: str) -> str:
     return ""
 
 
-def run_one(sim_bin: str, scenario_path: str) -> tuple[int, list[dict]]:
+def _states_from_rows(rows: list[dict]) -> set[str]:
+    out: set[str] = set()
+    for row in rows:
+        d = row.get("display")
+        if d:
+            out.add(str(d))
+        ts = row.get("_trace_states")
+        if isinstance(ts, list):
+            out.update(str(x) for x in ts)
+    return out
+
+
+def run_one(sim_bin: str, scenario_path: str) -> tuple[int, list[dict], str]:
     proc = subprocess.run(
         [sim_bin, "--scenario", scenario_path, "--jsonl"],
         stdout=subprocess.PIPE,
@@ -46,7 +58,7 @@ def run_one(sim_bin: str, scenario_path: str) -> tuple[int, list[dict]]:
             trace.append(json.loads(ln))
         except json.JSONDecodeError:
             continue
-    return proc.returncode, trace
+    return proc.returncode, trace, (proc.stderr or "").strip()
 
 
 def load_required(path: str) -> list[str]:
@@ -67,9 +79,7 @@ def main() -> int:
         return 2
 
     maps_dir = os.path.join(root, "system_tests", "maps")
-    files = sorted(
-        f for f in os.listdir(maps_dir) if f.endswith(".json")
-    )
+    files = sorted(f for f in os.listdir(maps_dir) if f.endswith(".json"))
     if len(files) < 30:
         print(f"Expected >=30 scenario files, found {len(files)}", file=sys.stderr)
         return 2
@@ -78,8 +88,8 @@ def main() -> int:
     union: set[str] = set()
     for name in files:
         path = os.path.join(maps_dir, name)
-        code, trace = run_one(sim, path)
-        seen = {row.get("display", "") for row in trace}
+        code, trace, err = run_one(sim, path)
+        seen = _states_from_rows(trace)
         union |= seen
         req = load_required(path)
         if req:
@@ -88,7 +98,6 @@ def main() -> int:
                 print(f"FAIL {name}: missing states in this run {miss}", file=sys.stderr)
                 failed = True
         if code != 0:
-            err = (proc.stderr or "").strip()
             if err:
                 print(err, file=sys.stderr)
             print(f"FAIL {name}: rvc_sim exit {code}", file=sys.stderr)

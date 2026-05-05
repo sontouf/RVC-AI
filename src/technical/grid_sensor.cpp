@@ -15,7 +15,7 @@ int drow(Heading h) {
       return 0;
   }
 #if defined(__GNUC__) || defined(__clang__)
-  __builtin_unreachable();
+  __builtin_unreachable();  // GCOVR_EXCL_LINE
 #else
   return 0;
 #endif
@@ -32,7 +32,7 @@ int dcol(Heading h) {
       return 0;
   }
 #if defined(__GNUC__) || defined(__clang__)
-  __builtin_unreachable();
+  __builtin_unreachable();  // GCOVR_EXCL_LINE
 #else
   return 0;
 #endif

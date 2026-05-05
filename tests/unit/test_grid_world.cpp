@@ -46,6 +46,13 @@ TEST(GridWorld, MoveForwardStoppedAtBorder) {
   EXPECT_EQ(w.row(), 0);
 }
 
+TEST(GridWorld, MoveBackwardStoppedOutOfGridHeadingSouth) {
+  GridWorld w(3, 3);
+  w.set_pose(0, 1, Heading::South);
+  w.move_backward();
+  EXPECT_EQ(w.row(), 0);
+}
+
 TEST(GridWorld, MoveBackwardIntoFreeCell) {
   GridWorld w(4, 4);
   w.set_pose(1, 2, Heading::East);
