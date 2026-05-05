@@ -33,32 +33,27 @@ jobs:
             build/rvc_unit_tests
             build/rvc_integration_tests
 
-  unit_tests:
+  # Rebuild and run tests on the runner (avoids artifact path/permission issues with prebuilt binaries).
+  tests:
     needs: [build]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rvc-binaries
-          path: .
-      - name: Run unit tests
-        run: chmod +x build/rvc_unit_tests && ./build/rvc_unit_tests
-
-  integration_tests:
-    needs: [unit_tests]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: rvc-binaries
-          path: .
-      - name: Run integration tests
-        run: chmod +x build/rvc_integration_tests && ./build/rvc_integration_tests
+      - name: Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build g++
+      - name: Configure
+        run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release -DRVC_BUILD_TESTS=ON -DRVC_BUILD_SIM=ON
+      - name: Build tests
+        run: cmake --build build --parallel
+      - name: Unit tests
+        run: ./build/rvc_unit_tests
+      - name: Integration tests
+        run: ./build/rvc_integration_tests
 
   coverage:
-    needs: [integration_tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -84,7 +79,7 @@ jobs:
           path: coverage.info
 
   system_tests:
-    needs: [integration_tests]
+    needs: [tests]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
