@@ -43,9 +43,13 @@ $bodyObj = @{
 $body = $bodyObj | ConvertTo-Json
 
 try {
-  Invoke-RestMethod -Uri "https://api.github.com/user/repos" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+  Invoke-RestMethod -Uri "https://api.github.com/user/repos" -Method Post -Headers $headers -Body $body -ContentType "application/json" | Out-Null
 } catch {
-  Write-Error "GitHub API failed: $($_.Exception.Message). If repo exists, skip creation and only add remote + push."
+  if ($_.Exception.Response.StatusCode -eq 422) {
+    Write-Warning "Repo may already exist; continuing with remote add / push."
+  } else {
+    throw
+  }
 }
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
