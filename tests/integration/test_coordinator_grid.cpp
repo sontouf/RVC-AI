@@ -76,3 +76,117 @@ TEST(CoordinatorGrid, DustDebouncesConsecutiveReadings) {
   auto it = std::find(tr.begin(), tr.end(), "Cleaning_Forward_Boost");
   EXPECT_NE(it, tr.end());
 }
+
+TEST(CoordinatorGrid, IdleTickRecordsIdle) {
+  GridWorld world(3, 3);
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.tick();
+  EXPECT_EQ(coord.session(), SessionState::Idle);
+  ASSERT_FALSE(coord.trace_states().empty());
+  EXPECT_EQ(coord.trace_states().back(), "Idle");
+}
+
+TEST(CoordinatorGrid, StopCommandTracesSessionStopping) {
+  GridWorld world(3, 3);
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  coord.on_user_command(UserCommand::Stop);
+  const auto& tr = coord.trace_states();
+  auto it = std::find(tr.begin(), tr.end(), "Session_Stopping");
+  EXPECT_NE(it, tr.end());
+  EXPECT_EQ(coord.session(), SessionState::Idle);
+}
+
+TEST(CoordinatorGrid, ClearTraceEmptiesHistory) {
+  GridWorld world(3, 3);
+  world.set_pose(1, 1, Heading::East);
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  coord.tick();
+  coord.clear_trace();
+  EXPECT_TRUE(coord.trace_states().empty());
+}
+
+TEST(CoordinatorGrid, EnclosureRunsEscapeManeuvers) {
+  GridWorld world(5, 5);
+  world.set_pose(2, 2, Heading::East);
+  world.set_obstacle(2, 3, true);  // front
+  world.set_obstacle(1, 2, true);  // left
+  world.set_obstacle(3, 2, true);  // right
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  bool saw_reverse = false;
+  bool saw_stop = false;
+  for (int i = 0; i < 12; ++i) {
+    coord.tick();
+    for (const auto& s : coord.trace_states()) {
+      if (s == "Maneuver_Reverse") {
+        saw_reverse = true;
+      }
+      if (s == "Maneuver_Stop") {
+        saw_stop = true;
+      }
+    }
+  }
+  EXPECT_TRUE(saw_stop);
+  EXPECT_TRUE(saw_reverse);
+}
+
+TEST(CoordinatorGrid, DustDetectedEventMergesIntoSnapshot) {
+  GridWorld world(4, 4);
+  world.set_pose(1, 1, Heading::East);
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  ControllerConfig cfg;
+  cfg.dust_debounce_consecutive_ticks = 1;
+  cfg.boost_duration_ticks = 4;
+  CleaningCoordinator coord(sensor, actuator, cfg);
+  coord.on_user_command(UserCommand::Start);
+  coord.on_dust_detected(4);
+  coord.tick();
+  const auto& tr = coord.trace_states();
+  auto it = std::find(tr.begin(), tr.end(), "Cleaning_Forward_Boost");
+  EXPECT_NE(it, tr.end());
+}
+
+TEST(CoordinatorGrid, DustBelowThresholdResetsDebounceStreak) {
+  GridWorld world(4, 4);
+  world.set_pose(1, 1, Heading::East);
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  ControllerConfig cfg;
+  cfg.dust_debounce_consecutive_ticks = 3;
+  cfg.dust_level_threshold = 2;
+  cfg.boost_duration_ticks = 4;
+  CleaningCoordinator coord(sensor, actuator, cfg);
+  coord.on_user_command(UserCommand::Start);
+  coord.on_perception({false, false, false, 5});
+  coord.tick();
+  coord.on_perception({false, false, false, 0});  // below threshold — streak reset
+  coord.tick();
+  coord.on_perception({false, false, false, 5});
+  coord.tick();
+  const auto& tr = coord.trace_states();
+  auto it = std::find(tr.begin(), tr.end(), "Cleaning_Forward_Boost");
+  EXPECT_EQ(it, tr.end());
+}
+
+TEST(CoordinatorGrid, PartialOnlyLeftBlockedStillMovesForward) {
+  GridWorld world(5, 5);
+  world.set_pose(2, 2, Heading::East);
+  world.set_obstacle(1, 2, true);  // left of robot (North) when facing East
+  GridSensor sensor(world);
+  GridActuator actuator(world);
+  CleaningCoordinator coord(sensor, actuator);
+  coord.on_user_command(UserCommand::Start);
+  coord.tick();
+  EXPECT_EQ(world.col(), 3);
+}

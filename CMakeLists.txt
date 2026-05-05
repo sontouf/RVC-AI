@@ -54,6 +54,10 @@ if(RVC_BUILD_TESTS)
   add_executable(rvc_unit_tests
     tests/unit/test_navigation_policy.cpp
     tests/unit/test_cleaning_power_policy.cpp
+    tests/unit/test_types.cpp
+    tests/unit/test_grid_world.cpp
+    tests/unit/test_grid_sensor.cpp
+    tests/unit/test_grid_actuator.cpp
   )
   target_link_libraries(rvc_unit_tests PRIVATE rvc_core GTest::gtest_main)
   add_executable(rvc_integration_tests

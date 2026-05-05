@@ -45,3 +45,29 @@ TEST(NavigationPolicy, AvoidPrefersLeftWhenRightBlocked) {
   const ManeuverPlan p = nav.plan_avoidance(s);
   EXPECT_EQ(p.side, AvoidSide::Left);
 }
+
+TEST(NavigationPolicy, AvoidanceBothSidesBlockedWhenFrontBlocked) {
+  NavigationPolicy nav;
+  PerceptionSnapshot s{};
+  s.front_blocked = true;
+  s.left_blocked = true;
+  s.right_blocked = true;
+  const ManeuverPlan p = nav.plan_avoidance(s);
+  EXPECT_EQ(p.side, AvoidSide::Right);
+}
+
+TEST(NavigationPolicy, AvoidanceBiasesRightWhenFrontClear) {
+  NavigationPolicy nav;
+  PerceptionSnapshot s{};
+  s.front_blocked = false;
+  const ManeuverPlan p = nav.plan_avoidance(s);
+  EXPECT_EQ(p.side, AvoidSide::Right);
+}
+
+TEST(NavigationPolicy, PlanEscapeEnclosure) {
+  NavigationPolicy nav;
+  PerceptionSnapshot s{};
+  const EscapePlan p = nav.plan_escape_enclosure(s);
+  EXPECT_EQ(p.reverse_steps, 1);
+  EXPECT_EQ(p.side, AvoidSide::Right);
+}

@@ -14,7 +14,11 @@ int drow(Heading h) {
     case Heading::West:
       return 0;
   }
+#if defined(__GNUC__) || defined(__clang__)
+  __builtin_unreachable();
+#else
   return 0;
+#endif
 }
 
 int dcol(Heading h) {
@@ -27,7 +31,11 @@ int dcol(Heading h) {
     case Heading::South:
       return 0;
   }
+#if defined(__GNUC__) || defined(__clang__)
+  __builtin_unreachable();
+#else
   return 0;
+#endif
 }
 
 Heading turn_cw(Heading h) {

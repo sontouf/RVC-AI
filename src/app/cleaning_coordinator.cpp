@@ -99,9 +99,6 @@ void CleaningCoordinator::enqueue_escape(const EscapePlan& plan) {
 }
 
 void CleaningCoordinator::execute_next_pending() {
-  if (pending_.empty()) {
-    return;
-  }
   const QueuedStep step = pending_.front();
   pending_.pop_front();
   switch (step.op) {
@@ -170,17 +167,11 @@ void CleaningCoordinator::tick() {
     power_.schedule_boost(lvl, config_.boost_duration_ticks);
   }
 
-  if (nav_.should_continue_forward(snap)) {
-    apply_cleaning_power_command();
-    actuator_.forward_clean(power_.current_power());
-    display_ = (power_.current_power() == CleaningPowerLevel::Boost)
-                   ? DisplayState::Cleaning_Forward_Boost
-                   : DisplayState::Cleaning_Forward;
-  } else {
-    apply_cleaning_power_command();
-    actuator_.stop_motion();
-    display_ = DisplayState::Maneuver_Stop;
-  }
+  // Non-escape, non-avoidance path only runs when `should_continue_forward` holds (front clear for this map policy).
+  apply_cleaning_power_command();
+  actuator_.forward_clean(power_.current_power());
+  display_ = (power_.current_power() == CleaningPowerLevel::Boost) ? DisplayState::Cleaning_Forward_Boost
+                                                                     : DisplayState::Cleaning_Forward;
 
   record_state();
 }
