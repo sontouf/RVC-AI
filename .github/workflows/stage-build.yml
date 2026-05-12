@@ -2,9 +2,6 @@
 on:
   workflow_call:
 
-permissions:
-  contents: read
-
 jobs:
   compile:
     runs-on: ubuntu-latest

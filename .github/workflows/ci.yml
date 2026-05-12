@@ -13,8 +13,11 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+# Narrow defaults remove artifact permissions unless explicitly granted:
+# https://docs.github.com/en/actions/security-guides/automatic-token-authentication
 permissions:
   contents: read
+  actions: write
 
 jobs:
   build:
@@ -42,6 +45,8 @@ jobs:
     needs: [deploy]
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      actions: read
       pull-requests: write
     steps:
       - name: Post automated review summary
