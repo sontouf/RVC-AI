@@ -34,6 +34,11 @@ jobs:
           .gcovr-venv/bin/pip install --upgrade pip
           .gcovr-venv/bin/pip install gcovr==8.6
 
+      - name: Verify coverage data (.gcda) is present
+        run: |
+          find build -name '*.gcda' | wc -l | tee gcda-count.txt
+          test "$(cat gcda-count.txt | tr -d '[:space:]')" -gt 0
+
       - name: Line coverage gate (>= 90%, implementation sources only)
         run: |
           mkdir -p coverage-html
