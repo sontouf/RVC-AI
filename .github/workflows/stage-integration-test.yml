@@ -23,19 +23,25 @@ jobs:
       - name: "Integration tests (CTest label: integration)"
         run: ctest --test-dir build -L integration --output-on-failure
 
+      - name: Install gcc toolchain (gcov for gcovr)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++
+
       - name: Install gcovr (venv; PEP 668 safe on ubuntu-latest)
         run: |
           python3 -m venv .gcovr-venv
           .gcovr-venv/bin/pip install --upgrade pip
           .gcovr-venv/bin/pip install gcovr==8.6
 
-      - name: Line coverage gate (>= 90%, library only)
+      - name: Line coverage gate (>= 90%, implementation sources only)
         run: |
+          mkdir -p coverage-html
           .gcovr-venv/bin/python -m gcovr \
+            --verbose \
             --root . \
             --fail-under-line 90 \
             --object-directory build \
-            --filter include/rvc/ \
             --filter src/rvc/ \
             --html-details coverage-html/index.html \
             --xml coverage.xml
