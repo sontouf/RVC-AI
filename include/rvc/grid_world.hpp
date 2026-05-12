@@ -23,6 +23,9 @@ class GridWorld {
 
   int cleaned_cells() const;
 
+  /** True if the open cell was marked cleaned at least once (for visualization / telemetry). */
+  bool is_cell_cleaned(int row, int col) const;
+
  private:
   std::vector<std::string> grid_;
   std::vector<std::vector<bool>> dust_;

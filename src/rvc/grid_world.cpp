@@ -68,6 +68,13 @@ int GridWorld::cleaned_cells() const {
   return cleaned_cells_;
 }
 
+bool GridWorld::is_cell_cleaned(int row, int col) const {
+  if (!in_bounds(row, col)) {
+    return false;
+  }
+  return cleaned_[static_cast<size_t>(row)][static_cast<size_t>(col)];
+}
+
 void GridWorld::ensure_layers() {
   const int rows = static_cast<int>(grid_.size());
   int cols = 0;

@@ -31,6 +31,7 @@ jobs:
             coverage-html/
             coverage.xml
             build/rvc_sim
+            build/rvc_tickd
             build/rvc_unit_tests
             build/rvc_integration_tests
           retention-days: 30

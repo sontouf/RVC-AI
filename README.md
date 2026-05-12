@@ -2,7 +2,7 @@
 
 Robot vacuum **control software** developed with **OOAD (Unified Process style)** artifacts under `arch/`, **TDD** with **GoogleTest**, and **GitHub Actions** CI/CD.
 
-The **GUI simulator** lives under `sim/` (Python + Tkinter). **System tests** drive the `rvc_sim` executable with JSON scenarios under `system_tests/maps/`.
+The **GUI studio** (`sim/rvc_grid_gui.py`, Tkinter) edits maps and steps ticks via **`rvc_tickd`** (C++). **System tests** use `rvc_sim` with JSON under `system_tests/maps/`.
 
 ## Documentation map
 
@@ -72,10 +72,16 @@ python system_tests/run_all.py --sim ./build/Release/rvc_sim.exe
 
 ## GUI simulator
 
-See `docs/simulator-runbook.md`.
+See `docs/simulator-runbook.md` (인터랙티브 스튜디오 + 선택적 `--replay`).
+
+```powershell
+cmake --build build --config Release --target rvc_tickd
+python .\sim\rvc_grid_gui.py
+```
 
 ```bash
-python3 sim/rvc_grid_gui.py --help
+cmake --build build --target rvc_tickd
+python3 sim/rvc_grid_gui.py
 ```
 
 Headless smoke (CI helper):

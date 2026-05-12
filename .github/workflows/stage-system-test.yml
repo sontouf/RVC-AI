@@ -18,7 +18,15 @@ jobs:
         run: tar xzf rvc-build.tgz
 
       - name: Make sim executable
-        run: chmod +x build/rvc_sim || true
+        run: chmod +x build/rvc_sim build/rvc_tickd || true
+
+      - name: rvc_tickd protocol smoke
+        run: |
+          printf '%s\n' \
+            '{"op":"init","grid":["...",".#.","..."],"dust":[[1,1]],"start":{"row":1,"col":0,"heading":"E"}}' \
+            '{"op":"tick"}' \
+            '{"op":"quit"}' \
+            | ./build/rvc_tickd | tail -n 1 | grep -q '"ok":true'
 
       - name: System tests (JSON scenarios → rvc_sim)
         run: python3 system_tests/run_all.py --sim ./build/rvc_sim

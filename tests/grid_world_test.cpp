@@ -292,6 +292,18 @@ TEST(GridWorld, MarksCellCleanedOnlyOnce) {
   EXPECT_EQ(world.cleaned_cells(), 1);
   ASSERT_TRUE(world.apply(cmd));
   EXPECT_EQ(world.cleaned_cells(), 1);
+  EXPECT_TRUE(world.is_cell_cleaned(0, 0));
+}
+
+TEST(GridWorld, IsCellCleanedFalseOutsideMap) {
+  GridWorld world;
+  world.load_map({"."});
+  RobotPose pose;
+  pose.row = 0;
+  pose.col = 0;
+  pose.heading = Heading::East;
+  world.set_pose(pose);
+  EXPECT_FALSE(world.is_cell_cleaned(5, 5));
 }
 
 TEST(GridWorld, SenseUsesHeadingForRelativeDirections) {

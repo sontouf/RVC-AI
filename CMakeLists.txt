@@ -59,6 +59,10 @@ add_executable(rvc_sim apps/rvc_sim.cpp)
 target_link_libraries(rvc_sim PRIVATE rvc_core nlohmann_json::nlohmann_json)
 target_compile_features(rvc_sim PRIVATE cxx_std_17)
 
+add_executable(rvc_tickd apps/rvc_tickd.cpp)
+target_link_libraries(rvc_tickd PRIVATE rvc_core nlohmann_json::nlohmann_json)
+target_compile_features(rvc_tickd PRIVATE cxx_std_17)
+
 # --- Unit tier (TDD / Red–Green on single classes) ---
 add_executable(rvc_unit_tests
   tests/cleaning_coordinator_test.cpp
