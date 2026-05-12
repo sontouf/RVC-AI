@@ -1,46 +1,44 @@
 #pragma once
 
-#include <cstdint>
+#include <string>
 #include <vector>
 
 #include "rvc/types.hpp"
 
 namespace rvc {
 
-enum class Heading { North = 0, East = 1, South = 2, West = 3 };
-
 class GridWorld {
  public:
-  GridWorld(int width, int height);
+  GridWorld();
 
-  void set_obstacle(int row, int col, bool blocked);
-  void set_dust(int row, int col, int level);
+  void load_map(const std::vector<std::string>& rows);
+  void set_dust_cell(int row, int col, bool value);
+  void set_pose(const RobotPose& pose);
 
-  [[nodiscard]] int width() const { return width_; }
-  [[nodiscard]] int height() const { return height_; }
-  [[nodiscard]] bool obstacle_at(int row, int col) const;
-  [[nodiscard]] int dust_at(int row, int col) const;
+  RobotPose pose() const;
 
-  void set_pose(int row, int col, Heading h);
-  [[nodiscard]] int row() const { return row_; }
-  [[nodiscard]] int col() const { return col_; }
-  [[nodiscard]] Heading heading() const { return heading_; }
+  SensorSnapshot sense() const;
 
-  [[nodiscard]] bool is_blocked(int row, int col) const;
+  bool apply(const TickCommand& cmd);
 
-  void move_forward();
-  void move_backward();
-  void turn(AvoidSide side);
+  int cleaned_cells() const;
 
  private:
-  int width_{0};
-  int height_{0};
-  int row_{0};
-  int col_{0};
-  Heading heading_{Heading::North};
-  std::vector<uint8_t> obstacles_;
-  std::vector<int> dust_;
-  static int idx(int r, int c, int w) { return r * w + c; }
+  std::vector<std::string> grid_;
+  std::vector<std::vector<bool>> dust_;
+  std::vector<std::vector<bool>> cleaned_;
+  RobotPose pose_;
+  int cleaned_cells_;
+
+  bool in_bounds(int row, int col) const;
+  bool is_blocked(int row, int col) const;
+  void ensure_layers();
+
+  void turn_left();
+  void turn_right();
+
+  bool try_step_forward(int sign);
+  void mark_clean_current_cell();
 };
 
 }  // namespace rvc

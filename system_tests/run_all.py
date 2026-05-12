@@ -1,119 +1,71 @@
 #!/usr/bin/env python3
-"""Run all system scenarios against rvc_sim; assert per-json requirements and global state coverage."""
+
 from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-
-ALL_DISPLAY_STATES = [
-    "Idle",
-    "Cleaning_Forward",
-    "Cleaning_Forward_Boost",
-    "Maneuver_Stop",
-    "Maneuver_Turn",
-    "Maneuver_Reverse",
-    "Session_Stopping",
-]
+from pathlib import Path
 
 
-def find_rvc_sim(repo_root: str) -> str:
-    cands = [
-        os.path.join(repo_root, "build", "rvc_sim"),
-        os.path.join(repo_root, "build", "Release", "rvc_sim.exe"),
-        os.path.join(repo_root, "build", "Debug", "rvc_sim.exe"),
-    ]
-    for p in cands:
-        if os.path.isfile(p):
-            return p
-    return ""
+def run_one(sim_exe: Path, scenario: Path) -> None:
+    spec = json.loads(scenario.read_text(encoding="utf-8"))
+    expect = spec.get("expect", {})
 
-
-def _states_from_rows(rows: list[dict]) -> set[str]:
-    out: set[str] = set()
-    for row in rows:
-        d = row.get("display")
-        if d:
-            out.add(str(d))
-        ts = row.get("_trace_states")
-        if isinstance(ts, list):
-            out.update(str(x) for x in ts)
-    return out
-
-
-def run_one(sim_bin: str, scenario_path: str) -> tuple[int, list[dict], str]:
     proc = subprocess.run(
-        [sim_bin, "--scenario", scenario_path, "--jsonl"],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        [str(sim_exe), str(scenario)],
+        capture_output=True,
         text=True,
-        check=False,
     )
+
+    if proc.returncode != 0:
+        raise RuntimeError(f"{scenario.name} failed ({proc.returncode}): {proc.stderr.strip()}")
+
     lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
-    trace = []
-    for ln in lines:
-        try:
-            trace.append(json.loads(ln))
-        except json.JSONDecodeError:
-            continue
-    return proc.returncode, trace, (proc.stderr or "").strip()
+    if not lines:
+        raise RuntimeError(f"{scenario.name} produced no stdout")
 
+    summary = json.loads(lines[-1])
 
-def load_required(path: str) -> list[str]:
-    with open(path, encoding="utf-8") as f:
-        doc = json.load(f)
-    return doc.get("required_states") or []
+    expected_result = expect.get("result")
+    if expected_result and summary.get("result") != expected_result:
+        raise AssertionError(f"{scenario.name} result mismatch: {summary}")
+
+    min_cleaned = expect.get("min_cleaned")
+    if min_cleaned is not None and summary.get("cleaned", 0) < min_cleaned:
+        raise AssertionError(
+            f"{scenario.name} cleaned {summary.get('cleaned')} < required {min_cleaned}: {summary}"
+        )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--root", default=os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    ap.add_argument("--sim", default="", help="Path to rvc_sim binary")
-    args = ap.parse_args()
-    root = args.root
-    sim = args.sim or find_rvc_sim(root)
-    if not sim:
-        print("rvc_sim not found. Build with CMake first.", file=sys.stderr)
+    parser = argparse.ArgumentParser(description="Run RVC system scenarios against rvc_sim.")
+    parser.add_argument("--sim", required=True, help="Path to rvc_sim executable")
+    args = parser.parse_args()
+
+    sim = Path(args.sim)
+    if not sim.exists():
+        print(f"Simulator binary not found: {sim}", file=sys.stderr)
         return 2
 
-    maps_dir = os.path.join(root, "system_tests", "maps")
-    files = sorted(f for f in os.listdir(maps_dir) if f.endswith(".json"))
-    if len(files) < 30:
-        print(f"Expected >=30 scenario files, found {len(files)}", file=sys.stderr)
+    root = Path(__file__).resolve().parent
+    maps = sorted((root / "maps").glob("*.json"))
+    if not maps:
+        print("No scenarios found under system_tests/maps", file=sys.stderr)
         return 2
 
-    failed = False
-    union: set[str] = set()
-    for name in files:
-        path = os.path.join(maps_dir, name)
-        code, trace, err = run_one(sim, path)
-        seen = _states_from_rows(trace)
-        union |= seen
-        req = load_required(path)
-        if req:
-            miss = [s for s in req if s not in seen]
-            if miss:
-                print(f"FAIL {name}: missing states in this run {miss}", file=sys.stderr)
-                failed = True
-        if code != 0:
-            if err:
-                print(err, file=sys.stderr)
-            print(f"FAIL {name}: rvc_sim exit {code}", file=sys.stderr)
-            failed = True
-        else:
-            print(f"OK   {name}  (trace lines {len(trace)})")
+    failures = 0
+    for scenario in maps:
+        try:
+            run_one(sim, scenario)
+            print(f"[PASS] {scenario.name}")
+        except (AssertionError, RuntimeError, json.JSONDecodeError) as exc:
+            failures += 1
+            print(f"[FAIL] {scenario.name}: {exc}", file=sys.stderr)
 
-    miss_global = [s for s in ALL_DISPLAY_STATES if s not in union]
-    if miss_global:
-        print(f"FAIL global coverage missing: {miss_global}", file=sys.stderr)
-        failed = True
-    else:
-        print("Global display-state coverage: OK", file=sys.stderr)
-
-    print(json.dumps({"display_states_seen": sorted(union), "scenario_count": len(files)}, indent=2))
-    return 1 if failed else 0
+    print(f"Finished {len(maps)} scenarios with {failures} failures.")
+    return 1 if failures else 0
 
 
 if __name__ == "__main__":

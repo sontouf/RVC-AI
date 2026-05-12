@@ -1,0 +1,11 @@
+{
+  "max_ticks": 40,
+  "grid": [
+    ".......",
+    ".......",
+    "......."
+  ],
+  "dust": [[1, 4]],
+  "start": { "row": 1, "col": 1, "heading": "E" },
+  "expect": { "result": "ok", "min_cleaned": 4 }
+}

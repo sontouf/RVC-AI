@@ -1,0 +1,30 @@
+---
+description: RVC OOAD/V&V 파이프라인 — 단계 게이트와 산출물 경로
+alwaysApply: true
+---
+
+# RVC OOAD · V&V 게이트
+
+## 진행 순서 (이전 단계 파일을 반드시 열어보고 진행)
+
+1. **Inception**: `docs/preliminary-requirements.md` → `arch/requirements/system-requirements.md`, `arch/requirements/nfr-quality-attributes.md`, `arch/use-cases/use-cases.md`
+2. **OOA**: `arch/analysis/system-sequence-diagrams.md`, `arch/analysis/domain-model.md`
+3. **OOD**: `arch/design/sequence-diagrams.md`, `arch/design/class-diagram.md`, `arch/design/solid-analysis.md`, `arch/design/implementation-mapping.md`
+4. **OOI / TDD**: `tests/`의 실패 테스트부터 작성 → `src/`/`include/` 구현 → `arch/vnv/tdd-traceability.md` 갱신
+5. **System test**: `system_tests/` + `docs/simulator-runbook.md` 준수
+6. **CI/CD**: `.github/workflows/ci.yml` 깨짐 금지
+
+## Cursor 도구 전환
+
+- 구조·모순 검토는 **Plan**, 파일 수정·실행은 **Agent**. 자세한 내용은 `docs/agent-mode-playbook.md`.
+
+## 불변조건
+
+- C++17, **GoogleTest**, **TDD**, **GitHub Actions**.
+- SW 본체는 **SOLID**와 초급자 가독성(과도한 템플릿 메타프로그래밍 금지).
+- 커버리지 라인 **≥ 90%** (CI에서 강제).
+
+## 스킬·커맨드
+
+- 상세 절차: `.cursor/skills/rvc-ooad-vnv/SKILL.md`
+- 단계별 진입: `.cursor/commands/rvc-*.md`

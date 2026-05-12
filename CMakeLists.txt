@@ -1,70 +1,61 @@
-cmake_minimum_required(VERSION 3.16)
-project(rvc_sw_controller LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.20)
+
+project(rvc_controller LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
-option(RVC_BUILD_TESTS "Build GTest targets" ON)
-option(RVC_BUILD_SIM "Build scenario runner (rvc_sim)" ON)
-option(RVC_ENABLE_COVERAGE "GCC/Clang: compile/link with --coverage (NFR-TEST-001)" OFF)
+option(RVC_ENABLE_COVERAGE "Enable GCC/Clang coverage flags" OFF)
 
 if(RVC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    add_compile_options("$<$<COMPILE_LANGUAGE:CXX>:--coverage>")
-    add_link_options("$<$<COMPILE_LANGUAGE:CXX>:--coverage>")
+    add_compile_options(-O0 -g --coverage)
+    add_link_options(--coverage)
+  else()
+    message(WARNING "Coverage flags are only wired for GCC/Clang; disabling.")
+    set(RVC_ENABLE_COVERAGE OFF)
   endif()
 endif()
 
+include(FetchContent)
+
+FetchContent_Declare(
+  googletest
+  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
+)
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+FetchContent_MakeAvailable(googletest)
+
+FetchContent_Declare(
+  json
+  GIT_REPOSITORY https://github.com/nlohmann/json.git
+  GIT_TAG v3.11.3
+)
+FetchContent_MakeAvailable(json)
+
+enable_testing()
+
 add_library(rvc_core
-  src/types.cpp
-  src/domain/navigation_policy.cpp
-  src/domain/cleaning_power_policy.cpp
-  src/app/cleaning_coordinator.cpp
-  src/technical/grid_world.cpp
-  src/technical/grid_sensor.cpp
-  src/technical/grid_actuator.cpp
+  src/rvc/types.cpp
+  src/rvc/cleaning_coordinator.cpp
+  src/rvc/grid_world.cpp
 )
-target_include_directories(rvc_core PUBLIC
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
-target_compile_options(rvc_core PRIVATE
-  $<$<CXX_COMPILER_ID:MSVC>:/W4>
-  $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-Wall -Wextra -Wpedantic>
-)
+target_include_directories(rvc_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/include")
+target_compile_features(rvc_core PUBLIC cxx_std_17)
 
-if(RVC_BUILD_SIM)
-  include(FetchContent)
-  FetchContent_Declare(json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-  )
-  FetchContent_MakeAvailable(json)
-  add_executable(rvc_sim tools/rvc_sim_main.cpp)
-  target_link_libraries(rvc_sim PRIVATE rvc_core nlohmann_json::nlohmann_json)
-endif()
+add_executable(rvc_sim apps/rvc_sim.cpp)
+target_link_libraries(rvc_sim PRIVATE rvc_core nlohmann_json::nlohmann_json)
+target_compile_features(rvc_sim PRIVATE cxx_std_17)
 
-if(RVC_BUILD_TESTS)
-  enable_testing()
-  include(FetchContent)
-  FetchContent_Declare(googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-  )
-  set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-  FetchContent_MakeAvailable(googletest)
-  add_executable(rvc_unit_tests
-    tests/unit/test_navigation_policy.cpp
-    tests/unit/test_cleaning_power_policy.cpp
-    tests/unit/test_types.cpp
-    tests/unit/test_grid_world.cpp
-    tests/unit/test_grid_sensor.cpp
-    tests/unit/test_grid_actuator.cpp
-  )
-  target_link_libraries(rvc_unit_tests PRIVATE rvc_core GTest::gtest_main)
-  add_executable(rvc_integration_tests
-    tests/integration/test_coordinator_grid.cpp
-  )
-  target_link_libraries(rvc_integration_tests PRIVATE rvc_core GTest::gtest_main)
-  include(GoogleTest)
-  gtest_discover_tests(rvc_unit_tests DISCOVERY_MODE PRE_TEST)
-  gtest_discover_tests(rvc_integration_tests DISCOVERY_MODE PRE_TEST)
-endif()
+add_executable(rvc_tests
+  tests/cleaning_coordinator_test.cpp
+  tests/grid_world_test.cpp
+  tests/integration_test.cpp
+  tests/types_test.cpp
+)
+target_link_libraries(rvc_tests PRIVATE rvc_core GTest::gtest_main)
+target_compile_features(rvc_tests PRIVATE cxx_std_17)
+
+include(GoogleTest)
+gtest_discover_tests(rvc_tests)

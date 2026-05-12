@@ -1,47 +1,32 @@
 #pragma once
 
-#include <string>
-
 namespace rvc {
 
-enum class AvoidSide { Left, Right };
+enum class DriveCommand { Forward, Backward, TurnLeft, TurnRight, Stop };
 
-enum class ObstacleClass {
-  Clear,
-  PartialNotEnclosure,
-  AllSidesBlocked,
+enum class CleanerCommand { Off, Normal, Boost };
+
+struct SensorSnapshot {
+  bool obstacle_front = false;
+  bool obstacle_left = false;
+  bool obstacle_right = false;
+  bool dust_detected = false;
 };
 
-enum class SessionState { Idle, Cleaning };
-
-enum class CleaningPowerLevel { Normal, Boost };
-
-enum class DisplayState {
-  Idle,
-  Cleaning_Forward,
-  Cleaning_Forward_Boost,
-  Maneuver_Stop,
-  Maneuver_Turn,
-  Maneuver_Reverse,
-  Session_Stopping,
+struct TickCommand {
+  DriveCommand drive = DriveCommand::Stop;
+  CleanerCommand cleaner = CleanerCommand::Off;
 };
 
-std::string to_string(DisplayState s);
+enum class Heading { North, East, South, West };
 
-struct PerceptionSnapshot {
-  bool front_blocked{false};
-  bool left_blocked{false};
-  bool right_blocked{false};
-  int dust_level{0};
+struct RobotPose {
+  int row = 0;
+  int col = 0;
+  Heading heading = Heading::East;
 };
 
-struct ManeuverPlan {
-  AvoidSide side{AvoidSide::Right};
-};
-
-struct EscapePlan {
-  int reverse_steps{1};
-  AvoidSide side{AvoidSide::Right};
-};
+const char* drive_command_to_string(DriveCommand cmd);
+const char* cleaner_command_to_string(CleanerCommand cmd);
 
 }  // namespace rvc

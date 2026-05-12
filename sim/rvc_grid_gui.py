@@ -1,214 +1,142 @@
 #!/usr/bin/env python3
 """
-Grid simulator GUI: loads JSON scenarios, runs `rvc_sim --jsonl`, animates the robot,
-and shows coverage checklist for RVC display states.
+GUI helper for visualizing `rvc_sim --jsonl` traces.
+
+This tool intentionally duplicates no control logic; it only renders what the C++ simulator prints.
 """
+
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import subprocess
 import sys
-import tkinter as tk
-from tkinter import filedialog, messagebox, ttk
-
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MAPS = os.path.join(REPO, "system_tests", "maps")
-
-ALL_STATES = [
-    "Idle",
-    "Cleaning_Forward",
-    "Cleaning_Forward_Boost",
-    "Maneuver_Stop",
-    "Maneuver_Turn",
-    "Maneuver_Reverse",
-    "Session_Stopping",
-]
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 
-def find_sim() -> str:
-    for p in (
-        os.path.join(REPO, "build", "rvc_sim"),
-        os.path.join(REPO, "build", "Release", "rvc_sim.exe"),
-        os.path.join(REPO, "build", "Debug", "rvc_sim.exe"),
-    ):
-        if os.path.isfile(p):
-            return p
-    return ""
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Animate RVC grid scenarios using rvc_sim JSONL output.")
+    parser.add_argument("--sim", required=True, help="Path to rvc_sim executable")
+    parser.add_argument("--scenario", required=True, help="Path to scenario JSON consumed by rvc_sim")
+    parser.add_argument("--delay-ms", type=int, default=120, help="Milliseconds between frames")
+    return parser.parse_args()
 
 
-class App:
-    def __init__(self) -> None:
-        self.root = tk.Tk()
-        self.root.title("RVC Grid Simulator")
-        self.sim_bin = find_sim()
-        self.scenario_path: str | None = None
-        self.scenario_doc: dict | None = None
-        self.trace: list[dict] = []
-        self.frame_idx = 0
-        self.cell = 36
-        self._build()
+def load_spec(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
 
-    def _build(self) -> None:
-        top = ttk.Frame(self.root, padding=6)
-        top.pack(fill=tk.X)
-        ttk.Button(top, text="Open scenario…", command=self._open).pack(side=tk.LEFT, padx=2)
-        ttk.Button(top, text="Run selected", command=self._run).pack(side=tk.LEFT, padx=2)
-        ttk.Button(top, text="Run ALL system maps", command=self._run_all).pack(side=tk.LEFT, padx=2)
-        ttk.Button(top, text="Step ▸", command=self._step).pack(side=tk.LEFT, padx=2)
-        self.info = ttk.Label(top, text=self._sim_hint())
-        self.info.pack(side=tk.LEFT, padx=8)
 
-        mid = ttk.Frame(self.root)
-        mid.pack(fill=tk.BOTH, expand=True)
-        self.canvas = tk.Canvas(mid, width=640, height=480, bg="#f4f4f4", highlightthickness=0)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+def collect_trace(sim_exe: Path, scenario: Path) -> Tuple[List[dict], dict]:
+    proc = subprocess.run(
+        [str(sim_exe), "--jsonl", str(scenario)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(proc.stderr.strip() or "rvc_sim failed")
 
-        right = ttk.Frame(mid, padding=6, width=240)
-        right.pack(side=tk.RIGHT, fill=tk.Y)
-        ttk.Label(right, text="Display state checklist").pack(anchor=tk.W)
-        self.check_vars: dict[str, tk.Variable] = {}
-        for st in ALL_STATES:
-            v = tk.BooleanVar(value=False)
-            self.check_vars[st] = v
-            ttk.Checkbutton(right, text=st, variable=v, state="disabled").pack(anchor=tk.W)
-        self.summary = tk.Text(right, height=10, width=32, state=tk.DISABLED)
-        self.summary.pack(fill=tk.BOTH, expand=True, pady=6)
+    lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
+    if not lines:
+        raise RuntimeError("No stdout from rvc_sim")
 
-    def _sim_hint(self) -> str:
-        if self.sim_bin:
-            return f"rvc_sim: {self.sim_bin}"
-        return "rvc_sim not found — build with CMake (build/rvc_sim)"
-
-    def _open(self) -> None:
-        path = filedialog.askopenfilename(
-            initialdir=MAPS if os.path.isdir(MAPS) else REPO,
-            filetypes=[("JSON", "*.json"), ("All", "*.*")],
-        )
-        if path:
-            self._load_path(path)
-
-    def _load_path(self, path: str) -> None:
-        with open(path, encoding="utf-8") as f:
-            self.scenario_doc = json.load(f)
-        self.scenario_path = path
-        self.trace = []
-        self.frame_idx = 0
-        self._reset_checks()
-        self._draw_frame(None)
-        self._log(f"Loaded {os.path.basename(path)}")
-
-    def _reset_checks(self) -> None:
-        for st, v in self.check_vars.items():
-            v.set(False)
-
-    def _run(self) -> None:
-        if not self.scenario_path or not self.sim_bin:
-            messagebox.showerror("Run", "Need scenario and rvc_sim binary")
-            return
-        proc = subprocess.run(
-            [self.sim_bin, "--scenario", self.scenario_path, "--jsonl"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-        if proc.returncode != 0:
-            messagebox.showerror("rvc_sim", proc.stderr or f"exit {proc.returncode}")
-            return
-        lines = [ln for ln in proc.stdout.splitlines() if ln.strip()]
-        self.trace = [json.loads(ln) for ln in lines]
-        self.frame_idx = 0
-        for row in self.trace:
-            d = row.get("display")
-            if d in self.check_vars:
-                self.check_vars[d].set(True)
-        self._draw_frame(self.trace[0] if self.trace else None)
-        self._log(f"Trace ticks: {len(self.trace)}")
-
-    def _run_all(self) -> None:
-        if not self.sim_bin:
-            messagebox.showerror("Run all", "rvc_sim not found")
-            return
-        path = os.path.join(REPO, "system_tests", "run_all.py")
-        proc = subprocess.run(
-            [sys.executable, path, "--root", REPO, "--sim", self.sim_bin],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
-        self._log(proc.stdout)
-        if proc.stderr:
-            self._log(proc.stderr)
-        if proc.returncode != 0:
-            messagebox.showerror("System tests", "See log — failures reported")
+    frames: List[dict] = []
+    summary: Dict | None = None
+    for line in lines:
+        obj = json.loads(line)
+        if "drive" in obj:
+            frames.append(obj)
         else:
-            messagebox.showinfo("System tests", "All scenarios OK + global state coverage")
+            summary = obj
 
-    def _step(self) -> None:
-        if not self.trace:
-            return
-        self.frame_idx = (self.frame_idx + 1) % len(self.trace)
-        self._draw_frame(self.trace[self.frame_idx])
+    if summary is None:
+        raise RuntimeError("Missing summary line from rvc_sim")
 
-    def _log(self, text: str) -> None:
-        self.summary.configure(state=tk.NORMAL)
-        self.summary.insert(tk.END, text + "\n")
-        self.summary.see(tk.END)
-        self.summary.configure(state=tk.DISABLED)
+    return frames, summary
 
-    def _draw_frame(self, row: dict | None) -> None:
-        self.canvas.delete("all")
-        doc = self.scenario_doc
-        if not doc:
-            return
-        w = int(doc["width"])
-        h = int(doc["height"])
-        obs = {tuple(p) for p in doc.get("obstacles", [])}
-        dust = {(p[0], p[1]): p[2] if len(p) > 2 else 1 for p in doc.get("dust", [])}
 
-        pad = 8
-        cw = self.cell
-        for r in range(h):
-            for c in range(w):
-                x0 = pad + c * cw
-                y0 = pad + r * cw
-                fill = "#ffffff"
-                if (r, c) in obs:
-                    fill = "#444444"
-                elif (r, c) in dust:
-                    fill = "#d8c48a"
-                self.canvas.create_rectangle(x0, y0, x0 + cw, y0 + cw, fill=fill, outline="#cccccc")
+def run_headless_smoke() -> None:
+    # Import lazily so CI machines without Tk still succeed on earlier steps.
+    import tkinter as _tk  # noqa: F401
 
-        rr = rc = heading = ""
-        disp = sess = ""
-        dust_here = ""
-        if row:
-            rr, rc = int(row["row"]), int(row["col"])
-            heading = str(row.get("heading", ""))
-            disp = str(row.get("display", ""))
-            sess = str(row.get("session", ""))
-            dust_here = str(row.get("dust_here", ""))
-            cx = pad + rc * cw + cw // 2
-            cy = pad + rr * cw + cw // 2
-            self.canvas.create_oval(cx - 12, cy - 12, cx + 12, cy + 12, fill="#2a6df4", outline="#103060", width=2)
-            self.canvas.create_text(cx, cy, text="R", fill="white", font=("Segoe UI", 10, "bold"))
 
-        self.canvas.create_text(
-            10,
-            pad + h * cw + 10,
-            anchor=tk.W,
-            font=("Segoe UI", 9),
-            text=f"Pos: ({rr},{rc})  heading={heading}  state={disp}  session={sess}  dust_here={dust_here}",
-        )
+def main() -> int:
+    if os.environ.get("RVC_HEADLESS") == "1":
+        try:
+            run_headless_smoke()
+        except ImportError:
+            print("tkinter not installed; skipping GUI import check.", file=sys.stderr)
+        return 0
 
-    def run(self) -> None:
-        self.root.mainloop()
+    args = parse_args()
+    sim_exe = Path(args.sim)
+    scenario = Path(args.scenario)
+
+    spec = load_spec(scenario)
+    grid_rows = spec["grid"]
+
+    frames, summary = collect_trace(sim_exe, scenario)
+
+    import tkinter as tk
+
+    cell_px = 36
+    rows = len(grid_rows)
+    cols = max(len(row) for row in grid_rows) if rows else 0
+
+    root = tk.Tk()
+    root.title("RVC Grid GUI (trace replay)")
+
+    canvas = tk.Canvas(root, width=cols * cell_px, height=rows * cell_px, highlightthickness=0)
+    canvas.pack()
+
+    status = tk.StringVar()
+    status_bar = tk.Label(root, textvariable=status, anchor="w")
+    status_bar.pack(fill="x")
+
+    def draw_frame(frame: dict | None) -> None:
+        canvas.delete("all")
+        for r, row in enumerate(grid_rows):
+            for c, ch in enumerate(row):
+                x0 = c * cell_px
+                y0 = r * cell_px
+                x1 = x0 + cell_px
+                y1 = y0 + cell_px
+                fill = "#444444" if ch == "#" else "#f5f5f5"
+                canvas.create_rectangle(x0, y0, x1, y1, fill=fill, outline="#bbbbbb")
+
+        if frame is not None:
+            rr = int(frame["row"])
+            cc = int(frame["col"])
+            x0 = cc * cell_px + 4
+            y0 = rr * cell_px + 4
+            x1 = x0 + cell_px - 8
+            y1 = y0 + cell_px - 8
+            canvas.create_oval(x0, y0, x1, y1, fill="#1e88e5", outline="#0d47a1")
+
+        if frame is None:
+            status.set(f"finished | summary={summary}")
+        else:
+            status.set(
+                f"drive={frame.get('drive')} cleaner={frame.get('cleaner')} | summary={summary}"
+            )
+
+    idx = 0
+
+    def tick() -> None:
+        nonlocal idx
+        if idx < len(frames):
+            draw_frame(frames[idx])
+            idx += 1
+            root.after(args.delay_ms, tick)
+        else:
+            draw_frame(None)
+
+    tick()
+    root.mainloop()
+    return 0
 
 
 if __name__ == "__main__":
-    if os.environ.get("RVC_HEADLESS") == "1":
-        print("GUI skipped (RVC_HEADLESS=1)")
-        sys.exit(0)
-    App().run()
+    raise SystemExit(main())
