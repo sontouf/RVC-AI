@@ -175,3 +175,141 @@ TEST(GridWorld, CleanerSkipsMarkWhenStandingOnObstacleCell) {
   ASSERT_TRUE(world.apply(cmd));
   EXPECT_EQ(world.cleaned_cells(), 0);
 }
+
+TEST(GridWorld, TurnLeftAndTurnRightRotateHeading) {
+  GridWorld world;
+  world.load_map({
+      "...",
+      "...",
+      "...",
+  });
+
+  RobotPose pose;
+  pose.row = 1;
+  pose.col = 1;
+  pose.heading = Heading::North;
+  world.set_pose(pose);
+
+  TickCommand turn_left;
+  turn_left.drive = DriveCommand::TurnLeft;
+  turn_left.cleaner = CleanerCommand::Off;
+  ASSERT_TRUE(world.apply(turn_left));
+  EXPECT_EQ(world.pose().heading, Heading::West);
+
+  TickCommand turn_right;
+  turn_right.drive = DriveCommand::TurnRight;
+  turn_right.cleaner = CleanerCommand::Off;
+  ASSERT_TRUE(world.apply(turn_right));
+  EXPECT_EQ(world.pose().heading, Heading::North);
+}
+
+TEST(GridWorld, ForwardWhenHeadingNorth) {
+  GridWorld world;
+  world.load_map({
+      "...",
+      "...",
+      "...",
+  });
+
+  RobotPose pose;
+  pose.row = 1;
+  pose.col = 1;
+  pose.heading = Heading::North;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Forward;
+  cmd.cleaner = CleanerCommand::Off;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.pose().row, 0);
+  EXPECT_EQ(world.pose().col, 1);
+}
+
+TEST(GridWorld, ForwardWhenHeadingSouth) {
+  GridWorld world;
+  world.load_map({
+      "...",
+      "...",
+      "...",
+  });
+
+  RobotPose pose;
+  pose.row = 1;
+  pose.col = 1;
+  pose.heading = Heading::South;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Forward;
+  cmd.cleaner = CleanerCommand::Off;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.pose().row, 2);
+  EXPECT_EQ(world.pose().col, 1);
+}
+
+TEST(GridWorld, ForwardWhenHeadingWest) {
+  GridWorld world;
+  world.load_map({
+      "...",
+      "...",
+      "...",
+  });
+
+  RobotPose pose;
+  pose.row = 1;
+  pose.col = 1;
+  pose.heading = Heading::West;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Forward;
+  cmd.cleaner = CleanerCommand::Off;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.pose().row, 1);
+  EXPECT_EQ(world.pose().col, 0);
+}
+
+TEST(GridWorld, MarksCellCleanedOnlyOnce) {
+  GridWorld world;
+  world.load_map({
+      ".",
+  });
+
+  RobotPose pose;
+  pose.row = 0;
+  pose.col = 0;
+  pose.heading = Heading::East;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Stop;
+  cmd.cleaner = CleanerCommand::Normal;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.cleaned_cells(), 1);
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.cleaned_cells(), 1);
+}
+
+TEST(GridWorld, SenseUsesHeadingForRelativeDirections) {
+  GridWorld world;
+  world.load_map({
+      "###",
+      "#.#",
+      "###",
+  });
+
+  RobotPose pose;
+  pose.row = 1;
+  pose.col = 1;
+  pose.heading = Heading::North;
+  world.set_pose(pose);
+
+  const auto snapshot = world.sense();
+  EXPECT_TRUE(snapshot.obstacle_front);
+  EXPECT_TRUE(snapshot.obstacle_left);
+  EXPECT_TRUE(snapshot.obstacle_right);
+}
