@@ -20,14 +20,15 @@ jobs:
       - name: "Integration tests (CTest label: integration)"
         run: ctest --test-dir build -L integration --output-on-failure
 
-      - name: Install gcovr
+      - name: Install gcovr (venv; PEP 668 safe on ubuntu-latest)
         run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install gcovr==7.0.1
+          python3 -m venv .gcovr-venv
+          .gcovr-venv/bin/pip install --upgrade pip
+          .gcovr-venv/bin/pip install gcovr==8.6
 
       - name: Line coverage gate (>= 90%, library only)
         run: >
-          gcovr
+          .gcovr-venv/bin/python -m gcovr
           --root .
           --fail-under-line 90
           --object-directory build
