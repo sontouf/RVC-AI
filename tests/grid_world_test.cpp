@@ -133,3 +133,45 @@ TEST(GridWorld, IgnoresDustMarkersOutsideMap) {
 
   EXPECT_FALSE(world.sense().dust_detected);
 }
+
+TEST(GridWorld, CleanerSkipsMarkWhenPoseOutOfBounds) {
+  GridWorld world;
+  world.load_map({
+      "...",
+      "...",
+      "...",
+  });
+
+  RobotPose pose;
+  pose.row = -1;
+  pose.col = 1;
+  pose.heading = Heading::East;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Stop;
+  cmd.cleaner = CleanerCommand::Normal;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.cleaned_cells(), 0);
+}
+
+TEST(GridWorld, CleanerSkipsMarkWhenStandingOnObstacleCell) {
+  GridWorld world;
+  world.load_map({
+      "#",
+  });
+
+  RobotPose pose;
+  pose.row = 0;
+  pose.col = 0;
+  pose.heading = Heading::East;
+  world.set_pose(pose);
+
+  TickCommand cmd;
+  cmd.drive = DriveCommand::Stop;
+  cmd.cleaner = CleanerCommand::Normal;
+
+  ASSERT_TRUE(world.apply(cmd));
+  EXPECT_EQ(world.cleaned_cells(), 0);
+}

@@ -16,7 +16,7 @@ const char* drive_command_to_string(DriveCommand cmd) {
       return "Stop";
   }
 
-  return "Stop";
+  return "Stop";  // GCOVR_EXCL_LINE
 }
 
 const char* cleaner_command_to_string(CleanerCommand cmd) {
@@ -29,7 +29,7 @@ const char* cleaner_command_to_string(CleanerCommand cmd) {
       return "Boost";
   }
 
-  return "Off";
+  return "Off";  // GCOVR_EXCL_LINE
 }
 
 }  // namespace rvc

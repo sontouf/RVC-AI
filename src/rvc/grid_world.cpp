@@ -36,7 +36,7 @@ rvc::Heading rotate_left(rvc::Heading heading) {
     case Heading::East:
       return Heading::North;
   }
-  return Heading::North;
+  return Heading::North;  // GCOVR_EXCL_LINE
 }
 
 rvc::Heading rotate_right(rvc::Heading heading) {
@@ -51,7 +51,7 @@ rvc::Heading rotate_right(rvc::Heading heading) {
     case Heading::West:
       return Heading::North;
   }
-  return Heading::North;
+  return Heading::North;  // GCOVR_EXCL_LINE
 }
 
 }  // namespace
@@ -216,7 +216,7 @@ bool GridWorld::apply(const TickCommand& cmd) {
       return try_step_forward(-1);
   }
 
-  return true;
+  return true;  // GCOVR_EXCL_LINE
 }
 
 }  // namespace rvc

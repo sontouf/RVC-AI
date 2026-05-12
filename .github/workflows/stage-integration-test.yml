@@ -43,7 +43,6 @@ jobs:
         run: |
           mkdir -p coverage-html
           .gcovr-venv/bin/python -m gcovr \
-            --verbose \
             --root . \
             --fail-under-line 90 \
             --object-directory build \

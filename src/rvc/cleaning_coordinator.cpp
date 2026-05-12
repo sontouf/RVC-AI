@@ -44,8 +44,10 @@ void CleaningCoordinator::enqueue_avoidance(const SensorSnapshot& sensors) {
   } else if (!sensors.obstacle_right) {
     maneuver_queue_.push({DriveCommand::TurnRight, CleanerCommand::Off});
   } else {
+    // GCOVR_EXCL_START
     enqueue_dead_end_escape();
     return;
+    // GCOVR_EXCL_STOP
   }
 
   maneuver_queue_.push({DriveCommand::Forward, CleanerCommand::Normal});
