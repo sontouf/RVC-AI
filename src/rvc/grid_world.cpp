@@ -160,9 +160,10 @@ void GridWorld::mark_clean_current_cell() {
     return;
   }
 
-  auto& flag = cleaned_[static_cast<size_t>(pose_.row)][static_cast<size_t>(pose_.col)];
-  if (!flag) {
-    flag = true;
+  const size_t row = static_cast<size_t>(pose_.row);
+  const size_t col = static_cast<size_t>(pose_.col);
+  if (!cleaned_[row][col]) {
+    cleaned_[row][col] = true;
     cleaned_cells_++;
   }
 }
