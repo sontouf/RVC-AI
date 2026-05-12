@@ -17,7 +17,7 @@ jobs:
       - name: Make executables runnable
         run: chmod +x build/rvc_unit_tests build/rvc_integration_tests build/rvc_sim || true
 
-      - name: Integration tests (CTest label: integration)
+      - name: "Integration tests (CTest label: integration)"
         run: ctest --test-dir build -L integration --output-on-failure
 
       - name: Install gcovr

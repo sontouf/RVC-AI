@@ -17,7 +17,7 @@ jobs:
       - name: Make executables runnable
         run: chmod +x build/rvc_unit_tests build/rvc_integration_tests build/rvc_sim || true
 
-      - name: Unit tests (CTest label: unit)
+      - name: "Unit tests (CTest label: unit)"
         run: ctest --test-dir build -L unit --output-on-failure
 
       - name: Upload build after unit (.gcda updated)
