@@ -214,6 +214,8 @@ bool GridWorld::apply(const TickCommand& cmd) {
     case DriveCommand::Backward:
       return try_step_forward(-1);
   }
+
+  return true;
 }
 
 }  // namespace rvc

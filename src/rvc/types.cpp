@@ -15,6 +15,8 @@ const char* drive_command_to_string(DriveCommand cmd) {
     case DriveCommand::Stop:
       return "Stop";
   }
+
+  return "Stop";
 }
 
 const char* cleaner_command_to_string(CleanerCommand cmd) {
@@ -26,6 +28,8 @@ const char* cleaner_command_to_string(CleanerCommand cmd) {
     case CleanerCommand::Boost:
       return "Boost";
   }
+
+  return "Off";
 }
 
 }  // namespace rvc
