@@ -8,7 +8,7 @@
 | FR-002 | `CleaningCoordinator.AvoidancePrefersLeftWhenBothSidesOpen_FR002`, `CleaningCoordinator.AvoidanceUsesRightWhenOnlyRightOpen_FR002` | 큐에 Stop/Turn/Forward |
 | FR-003 | `CleaningCoordinator.DeadEndTriggersBackup_FR003`, `CleaningCoordinator.DeadEndEscapeSequence_FR003` | 후진·회전 큐 |
 | FR-004 | `CleaningCoordinator.BoostActivatesOnDust_FR004`, `CleaningCoordinator.BoostDecrementsWhileForwarding_FR004` | 부스트 카운터 |
-| NFR-TEST-001 | 전체 `rvc_tests` | GTest 통합 실행 |
+| NFR-TEST-001 | `rvc_unit_tests` + `rvc_integration_tests` (CTest `-L unit` / `-L integration`) | GTest 단계별 실행 |
 | NFR-READ-001 | `TypesStrings.*` (명명 일관성 보조) | `drive_command_to_string` 등 진단 문자열 |
 
 ## 비기능(NFR) 검증

@@ -1,0 +1,27 @@
+# Reusable: Python system_tests runner calls rvc_sim (black-box scenarios).
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  system:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: rvc-build-after-integration
+          path: build
+
+      - name: Make sim executable
+        run: chmod +x build/rvc_sim || true
+
+      - name: System tests (JSON scenarios → rvc_sim)
+        run: python3 system_tests/run_all.py --sim ./build/rvc_sim
+
+      - name: GUI headless smoke (import / tkinter check)
+        run: RVC_HEADLESS=1 python3 sim/rvc_grid_gui.py

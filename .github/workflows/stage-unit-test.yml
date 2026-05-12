@@ -1,0 +1,31 @@
+# Reusable: GoogleTest unit tier (-L unit).
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download build
+        uses: actions/download-artifact@v4
+        with:
+          name: rvc-build-after-compile
+          path: build
+
+      - name: Make executables runnable
+        run: chmod +x build/rvc_unit_tests build/rvc_integration_tests build/rvc_sim || true
+
+      - name: Unit tests (CTest label: unit)
+        run: ctest --test-dir build -L unit --output-on-failure
+
+      - name: Upload build after unit (.gcda updated)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rvc-build-after-unit
+          path: build/
+          retention-days: 3

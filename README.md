@@ -21,11 +21,25 @@ The **GUI simulator** lives under `sim/` (Python + Tkinter). **System tests** dr
 ```bash
 cmake -B build -S .
 cmake --build build
-./build/rvc_tests          # Linux / Git Bash
-build\Release\rvc_tests.exe   # VS multi-config (Windows)
+./build/rvc_unit_tests
+./build/rvc_integration_tests
 ```
 
-Or run tests via CTest:
+Windows (multi-config 예시):
+
+```powershell
+build\Release\rvc_unit_tests.exe
+build\Release\rvc_integration_tests.exe
+```
+
+CTest는 **라벨**로 단계를 나눕니다 (CI와 동일):
+
+```bash
+ctest --test-dir build -L unit --output-on-failure
+ctest --test-dir build -L integration --output-on-failure
+```
+
+전체:
 
 ```bash
 ctest --test-dir build --output-on-failure
@@ -39,7 +53,7 @@ cmake --build build
 ctest --test-dir build --output-on-failure
 ```
 
-CI uploads **lcov HTML** and binaries as workflow artifacts.
+CI는 `/.github/workflows/ci.yml` 오케스트레이터가 **build → unit → integration(coverage) → system(sim) → deploy** 순으로 실행하고, 최종 아티팩트 **`rvc-deployment-bundle`** 을 올립니다.
 
 ## System tests
 
