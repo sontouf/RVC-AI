@@ -8,11 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build
+      - name: Download build tarball
         uses: actions/download-artifact@v4
         with:
           name: rvc-build-after-compile
-          path: build
+          path: .
+
+      - name: Extract build
+        run: tar xzf rvc-build.tgz
 
       - name: Make executables runnable
         run: chmod +x build/rvc_unit_tests build/rvc_integration_tests build/rvc_sim || true
@@ -20,9 +23,12 @@ jobs:
       - name: "Unit tests (CTest label: unit)"
         run: ctest --test-dir build -L unit --output-on-failure
 
-      - name: Upload build after unit (.gcda updated)
+      - name: Pack build after unit (.gcda updated)
+        run: tar czf rvc-build.tgz build
+
+      - name: Upload build tarball after unit
         uses: actions/upload-artifact@v4
         with:
           name: rvc-build-after-unit
-          path: build/
+          path: rvc-build.tgz
           retention-days: 3

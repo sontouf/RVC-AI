@@ -8,11 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build
+      - name: Download build tarball
         uses: actions/download-artifact@v4
         with:
           name: rvc-build-after-integration
-          path: build
+          path: .
+
+      - name: Extract build
+        run: tar xzf rvc-build.tgz
 
       - name: Make sim executable
         run: chmod +x build/rvc_sim || true

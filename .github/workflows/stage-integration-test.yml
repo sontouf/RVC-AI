@@ -8,11 +8,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download build (after unit tests)
+      - name: Download build tarball (after unit tests)
         uses: actions/download-artifact@v4
         with:
           name: rvc-build-after-unit
-          path: build
+          path: .
+
+      - name: Extract build
+        run: tar xzf rvc-build.tgz
 
       - name: Make executables runnable
         run: chmod +x build/rvc_unit_tests build/rvc_integration_tests build/rvc_sim || true
@@ -27,15 +30,15 @@ jobs:
           .gcovr-venv/bin/pip install gcovr==8.6
 
       - name: Line coverage gate (>= 90%, library only)
-        run: >
-          .gcovr-venv/bin/python -m gcovr
-          --root .
-          --fail-under-line 90
-          --object-directory build
-          --filter include/rvc/
-          --filter src/rvc/
-          --html-details coverage-html/index.html
-          --xml coverage.xml
+        run: |
+          .gcovr-venv/bin/python -m gcovr \
+            --root . \
+            --fail-under-line 90 \
+            --object-directory build \
+            --filter include/rvc/ \
+            --filter src/rvc/ \
+            --html-details coverage-html/index.html \
+            --xml coverage.xml
 
       - name: Upload coverage bundle
         uses: actions/upload-artifact@v4
@@ -46,9 +49,12 @@ jobs:
             coverage.xml
           retention-days: 14
 
-      - name: Upload build after integration
+      - name: Pack build after integration
+        run: tar czf rvc-build.tgz build
+
+      - name: Upload build tarball after integration
         uses: actions/upload-artifact@v4
         with:
           name: rvc-build-after-integration
-          path: build/
+          path: rvc-build.tgz
           retention-days: 3

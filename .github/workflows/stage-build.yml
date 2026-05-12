@@ -19,9 +19,13 @@ jobs:
       - name: Build
         run: cmake --build build
 
-      - name: Upload build tree (binaries + gcno for coverage)
+      # upload-artifact v4 respects .gitignore; /build/ is ignored so pack tarball first (.gcda + gcno preserved).
+      - name: Pack build directory
+        run: tar czf rvc-build.tgz build
+
+      - name: Upload build tarball
         uses: actions/upload-artifact@v4
         with:
           name: rvc-build-after-compile
-          path: build/
+          path: rvc-build.tgz
           retention-days: 3
